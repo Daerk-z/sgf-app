@@ -1,0 +1,143 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg: #1a1a1a;
+    --card: #262626;
+    --line: rgba(255, 255, 255, 0.45);
+    --text: #ffffff;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.config-page {
+    height: 100%;
+    padding: 18px 22px 22px;
+    background: var(--bg);
+}
+
+.config-table {
+    width: 100%;
+    height: 100%;
+    border-top: 2px solid var(--line);
+    border-left: 2px solid var(--line);
+    display: grid;
+    grid-template-rows: 1fr auto 1fr auto 1fr;
+}
+
+.config-row {
+    display: grid;
+    grid-template-columns: 2.1fr 1.2fr;
+    border-bottom: 2px solid var(--line);
+}
+
+.config-row + .config-divider {
+    border-bottom: 2px solid var(--line);
+}
+
+.config-cell {
+    padding: 24px 26px;
+    background: var(--card);
+}
+
+.config-cell + .config-cell {
+    border-left: 2px solid var(--line);
+}
+
+.config-title {
+    font-size: 20px;
+    font-weight: 650;
+    margin-bottom: 16px;
+}
+
+.config-list {
+    list-style: disc;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.config-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.pill-select {
+    min-width: 110px;
+    padding: 8px 14px;
+    background: #3b3b3b;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+    cursor: default;
+}
+
+.pill-select span:last-child {
+    font-size: 10px;
+}
+
+.palette {
+    padding: 6px 12px;
+    background: #3b3b3b;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.palette-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #111111;
+}
+
+.palette-dot:nth-child(2) { background: #444444; }
+.palette-dot:nth-child(3) { background: #666666; }
+.palette-dot:nth-child(4) { background: #888888; }
+.palette-dot:nth-child(5) { background: #d9d9d9; }
+
+.palette-dot.is-active {
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+.link-pill {
+    max-width: 220px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #3b3b3b;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.section-spacer {
+    border-bottom: 2px solid var(--line);
+}
+
+@media (max-width: 880px) {
+    .config-row {
+        grid-template-columns: 1fr;
+    }
+    .config-cell + .config-cell {
+        border-left: none;
+        border-top: 2px solid var(--line);
+    }
+}
+
