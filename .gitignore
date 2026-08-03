@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+Thumbs.db
+
+# Caché de desarrollo de Vite (estaba versionada dentro de node_modules/.vite
+# y provoca cambios que no se reflejan al clonar el repositorio)
+.vite/
+
+# Variables de entorno: nunca subir credenciales
+.env
+.env.*
+!.env.example
+
+# Descomprimir el ZIP del repositorio dentro del propio repositorio fue el
+# origen de sgf-app-main/, una copia completa y duplicada del proyecto
+*.zip
+sgf-app-main/
