@@ -1,0 +1,142 @@
+/* Migrado de legacy/css/ventas.css */
+
+.page {
+  --bg: #1a1a1a;
+  --card: #2a2a2a;
+  --card-2: #242424;
+  --line: rgba(255, 255, 255, 0.55);
+  --line-soft: rgba(255, 255, 255, 0.35);
+
+  height: 100%;
+  color: #ffffff;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 22px;
+  gap: 16px;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.inputGroup {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.label {
+  font-size: 12px;
+  opacity: 0.9;
+  letter-spacing: 0.3px;
+}
+
+.search {
+  width: min(520px, 100%);
+  padding: 14px 18px;
+  border-radius: 999px;
+  border: none;
+  outline: none;
+  background: var(--card);
+  color: #ffffff;
+  text-align: center;
+  font-size: 14px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.search::placeholder {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ok {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  border: none;
+  background: #3a3a3a;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.ok:active {
+  transform: scale(0.98);
+}
+
+.previewWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.previewCard {
+  width: min(520px, 100%);
+  min-height: 120px;
+  padding: 26px 22px;
+  border-radius: 26px;
+  background: var(--card-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.35;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+}
+
+.bottom {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.facturaPill {
+  position: absolute;
+  right: 18px;
+  top: -12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #2f2f2f;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+
+.grid {
+  width: 100%;
+  border-top: 2px solid var(--line);
+  border-left: 2px solid var(--line);
+  background: rgba(0, 0, 0, 0.08);
+  display: grid;
+  grid-auto-rows: 72px;
+}
+
+.gridRow {
+  display: grid;
+  grid-template-columns: 170px 170px 1fr 110px 40px 40px 40px 110px;
+}
+
+.cell {
+  border-right: 2px solid var(--line-soft);
+  border-bottom: 2px solid var(--line-soft);
+}
+
+@media (max-width: 860px) {
+  .top {
+    grid-template-columns: 1fr;
+  }
+  .facturaPill {
+    right: 10px;
+  }
+  .gridRow {
+    grid-template-columns: 150px 150px 1fr 90px 40px 40px 90px;
+  }
+}

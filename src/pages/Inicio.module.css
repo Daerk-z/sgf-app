@@ -1,0 +1,178 @@
+/* Migrado de legacy/css/inicio.css.
+   El body { background: var(--bg) } original (era un documento HTML
+   aparte cargado en el iframe) pasa a ser el fondo del contenedor .page,
+   y las variables --bg/--card/--card-2 quedan definidas en ese mismo
+   selector en vez de en :root para no filtrarse a las demás páginas. */
+
+.page {
+  --bg: #1a1a1a;
+  --card: #262626;
+  --card-2: #2f2f2f;
+
+  height: 100%;
+  color: #ffffff;
+  background: var(--bg);
+  padding: 18px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 3fr 1.1fr;
+  gap: 20px;
+}
+
+.newsCard {
+  background: var(--card);
+  border-radius: 28px;
+  padding: 22px 26px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.newsTitle {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.newsContent {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) 1fr;
+  gap: 22px;
+  align-items: center;
+}
+
+.newsButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.newsPill {
+  width: 100%;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: #3a3a3a;
+}
+
+.newsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.newsItem {
+  opacity: 0.9;
+}
+
+.alertasCol {
+  background: var(--card);
+  border-radius: 28px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.alertasTitle {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.alertasList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.alertasItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alertDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3e3e3e;
+  flex-shrink: 0;
+}
+
+.alertText {
+  line-height: 1.2;
+}
+
+.bottom {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.alertCard {
+  background: var(--card-2);
+  border-radius: 28px;
+  padding: 22px 26px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.alertTitle {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.alertBody {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.alertList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.alertLabel {
+  opacity: 0.9;
+}
+
+.alertCta {
+  min-width: 120px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #4a4a4a;
+  color: #ffffff;
+  font-weight: 600;
+  text-align: center;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .top {
+    grid-template-columns: 1fr;
+  }
+  .bottom {
+    grid-template-columns: 1fr;
+  }
+}
