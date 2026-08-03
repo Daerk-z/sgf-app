@@ -1,0 +1,74 @@
+name: Deploy a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # También en pull requests, para que el build valide los cambios antes de
+  # fusionarlos. En ese caso solo se compila: los pasos de publicación y el
+  # job de deploy quedan excluidos más abajo.
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez. cancel-in-progress en false para no abortar un
+# despliegue a medias y dejar el sitio en un estado inconsistente.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # react-router 8 declara engines.node >= 22.22.0, así que el
+          # habitual node-version: 20 rompe la instalación.
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run build
+
+      # GitHub Pages sirve archivos estáticos y no reescribe rutas: una URL
+      # como /sgf-app/panel/ventas no tiene archivo detrás y devolvería el 404
+      # propio de GitHub sin llegar a cargar la aplicación. Al publicar el
+      # mismo index.html como 404.html, Pages lo sirve ante cualquier ruta sin
+      # archivo, la aplicación arranca y react-router resuelve la URL en el
+      # cliente.
+      - run: cp dist/index.html dist/404.html
+
+      # enablement: true activa Pages con el GITHUB_TOKEN del propio workflow.
+      # Hace falta porque Pages todavía no está habilitado en el repositorio y
+      # activarlo desde Settings requiere permiso de admin.
+      - uses: actions/configure-pages@v6
+        if: github.event_name != 'pull_request'
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist
+
+  deploy:
+    # En pull requests solo interesa saber si compila; publicar el sitio
+    # corresponde únicamente a los push sobre main.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
