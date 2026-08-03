@@ -33,11 +33,18 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # Desde la raíz del monorepo: npm workspaces instala el árbol de todos
+      # los workspaces a partir del único package-lock.json que hay aquí.
       - run: npm ci
 
+      # El script de la raíz recorre los workspaces con --if-present, así que
+      # cubre también las apps que se añadan más adelante.
       - run: npm run lint
 
-      - run: npm run build
+      # Compilar solo la web: es lo único que se publica en Pages. Sin
+      # --workspace, el script de la raíz construiría todos los workspaces,
+      # incluido un backend que aquí no pinta nada.
+      - run: npm run build --workspace apps/web
 
       # GitHub Pages sirve archivos estáticos y no reescribe rutas: una URL
       # como /sgf-app/panel/ventas no tiene archivo detrás y devolvería el 404
@@ -45,7 +52,7 @@ jobs:
       # mismo index.html como 404.html, Pages lo sirve ante cualquier ruta sin
       # archivo, la aplicación arranca y react-router resuelve la URL en el
       # cliente.
-      - run: cp dist/index.html dist/404.html
+      - run: cp apps/web/dist/index.html apps/web/dist/404.html
 
       # enablement: true activa Pages con el GITHUB_TOKEN del propio workflow.
       # Hace falta porque Pages todavía no está habilitado en el repositorio y
@@ -58,7 +65,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
         with:
-          path: dist
+          path: apps/web/dist
 
   deploy:
     # En pull requests solo interesa saber si compila; publicar el sitio

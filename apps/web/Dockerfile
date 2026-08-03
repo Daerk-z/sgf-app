@@ -1,9 +1,18 @@
 # syntax=docker/dockerfile:1.7
 
-# sgf-app es una SPA de React + Vite sin backend: lo que produce `vite build`
-# son ficheros estáticos. Node solo hace falta para compilarlos, así que la
-# imagen final no lo lleva; se queda en nginx sirviendo dist/. De ahí el build
-# multietapa: la imagen resultante pesa decenas de MB en vez de cientos.
+# apps/web es una SPA de React + Vite: lo que produce `vite build` son ficheros
+# estáticos. Node solo hace falta para compilarlos, así que la imagen final no
+# lo lleva; se queda en nginx sirviendo dist/. De ahí el build multietapa: la
+# imagen resultante pesa decenas de MB en vez de cientos.
+#
+# EL CONTEXTO DE BUILD ES LA RAÍZ DEL MONOREPO, no apps/web. npm workspaces
+# mantiene un único package-lock.json arriba, y `npm ci` necesita ese lockfile
+# junto al manifiesto de cada workspace: desde apps/web no se ven. Por eso:
+#
+#   docker build -f apps/web/Dockerfile -t sgf-web .
+#   docker run --rm -p 8080:8080 sgf-web
+#
+# compose.dev.yaml, en la raíz, ya lo declara así (context: . + dockerfile:).
 
 ARG NODE_IMAGE=node:22-alpine
 ARG NGINX_IMAGE=nginx:1.29-alpine
@@ -14,32 +23,48 @@ FROM ${NODE_IMAGE} AS build
 
 WORKDIR /app
 
-# Solo el manifiesto y el lockfile: mientras esos dos no cambien, Docker
-# reutiliza la capa del `npm ci` aunque se haya tocado cualquier fichero de
-# src/. Copiar el proyecto entero antes de instalar reinstalaría las
-# dependencias en cada cambio de código.
+# Solo los manifiestos y el lockfile: mientras no cambien, Docker reutiliza la
+# capa del `npm ci` aunque se haya tocado cualquier fichero de src/. Copiar el
+# proyecto entero antes de instalar reinstalaría las dependencias en cada
+# cambio de código.
+# Son tres rutas y no una porque en un monorepo el lockfile vive en la raíz y
+# las dependencias en el manifiesto del workspace. Cada app nueva que se añada
+# aquí (apps/api, apps/desktop...) solo necesita su propia línea COPY si este
+# Dockerfile llega a depender de ella.
 COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/
 
 # `npm ci` instala también devDependencies: vite y sus plugins están ahí y sin
 # ellos no hay build. Por eso en esta etapa NO se pone NODE_ENV=production, que
 # haría que npm las omitiera y que `npm run build` fallara con "vite: not
 # found". El bundle sale igualmente en modo producción porque `vite build` ya
 # lo hace por defecto.
+# --workspace acota la instalación a apps/web: sin él, npm instalaría también
+# las dependencias del resto de workspaces del monorepo, que esta imagen no
+# necesita. --include-workspace-root añade las de la raíz (herramientas
+# compartidas), que hoy no hay ninguna pero mañana sí.
 # La caché de npm va en un mount: acelera las reconstrucciones sin quedarse
 # dentro de ninguna capa de la imagen.
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund
+    npm ci --no-audit --no-fund --workspace apps/web --include-workspace-root
 
-COPY . .
+# Solo el workspace que se compila, no el monorepo entero: así un cambio en
+# apps/api o en packages/ no invalida esta capa ni obliga a rehacer el build
+# del frontend.
+COPY apps/web/ apps/web/
 
-# vite.config.js fija base: '/sgf-app/' porque GitHub Pages publica el sitio en
-# un subdirectorio del dominio. Un contenedor normalmente sirve en la raíz, así
-# que aquí la base se sobrescribe y por defecto vale '/'. La base se congela en
-# el bundle durante el build (no es configurable al arrancar), de ahí que sea
-# un ARG y no una variable de entorno.
+# apps/web/vite.config.js fija base: '/sgf-app/' porque GitHub Pages publica el
+# sitio en un subdirectorio del dominio. Un contenedor normalmente sirve en la
+# raíz, así que aquí la base se sobrescribe y por defecto vale '/'. La base se
+# congela en el bundle durante el build (no es configurable al arrancar), de
+# ahí que sea un ARG y no una variable de entorno.
 # Para reproducir el despliegue de Pages: --build-arg BASE_PATH=/sgf-app/
+#
+# `npm run build --workspace apps/web` ejecuta el script con el cwd dentro del
+# workspace, así que vite resuelve su config y su root ahí y deja el bundle en
+# apps/web/dist. El `--` separa los argumentos de npm de los que van a vite.
 ARG BASE_PATH=/
-RUN npm run build -- --base="${BASE_PATH}"
+RUN npm run build --workspace apps/web -- --base="${BASE_PATH}"
 
 # El HTML generado referencia sus assets con rutas absolutas que ya incluyen la
 # base, así que los ficheros tienen que colgar de ese mismo prefijo dentro del
@@ -49,8 +74,8 @@ RUN npm run build -- --base="${BASE_PATH}"
 RUN set -eu; \
     base="/${BASE_PATH#/}"; base="${base%/}/"; \
     mkdir -p "/site${base}"; \
-    cp -a dist/. "/site${base}"; \
-    cp -a dist/index.html /site/index.html
+    cp -a apps/web/dist/. "/site${base}"; \
+    cp -a apps/web/dist/index.html /site/index.html
 
 
 # ------------------------------------------------------------- runtime -----
@@ -141,12 +166,15 @@ http {
 NGINX
 
 # `nginx -t` valida la configuración durante el build: un error de sintaxis
-# rompe aquí y no en el primer `docker run`. Los directorios temporales se
-# crean y se ceden después, porque el propio test los crearía como root y
-# entonces el usuario sin privilegios no podría escribir en ellos.
+# rompe aquí y no en el primer `docker run`.
+# El mkdir tiene que ir ANTES del test: aunque `nginx -t` no arranca el
+# servidor, sí abre el fichero indicado en `pid`, y con /tmp/nginx inexistente
+# falla con "open() /tmp/nginx/nginx.pid failed (2: No such file or
+# directory)". El chown va después porque el test crea sus ficheros como root
+# y el usuario sin privilegios no podría escribir en ellos.
 RUN rm -f /etc/nginx/conf.d/default.conf \
-    && nginx -t \
     && mkdir -p /tmp/nginx \
+    && nginx -t \
     && chown -R nginx:nginx /tmp/nginx /var/cache/nginx
 
 # Sin --chown: los ficheros se quedan de root y el proceso solo los lee, que es
