@@ -23,6 +23,17 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    # Este workflow solo compila la web. Cada app del monorepo trae su propio
+    # ecosistema, así que le tocará su propio workflow: no hay un pipeline
+    # único que las construya todas.
+    # working-directory afecta únicamente a los pasos `run`; los `uses` reciben
+    # rutas relativas a la raíz del repositorio y por eso las de abajo llevan
+    # el prefijo apps/web.
+    defaults:
+      run:
+        working-directory: apps/web
+
     steps:
       - uses: actions/checkout@v7
 
@@ -32,6 +43,9 @@ jobs:
           # habitual node-version: 20 rompe la instalación.
           node-version: '22'
           cache: npm
+          # Sin esto, setup-node busca el lockfile en la raíz y falla: la web
+          # es autónoma y el suyo está dentro de apps/web.
+          cache-dependency-path: apps/web/package-lock.json
 
       - run: npm ci
 
@@ -58,7 +72,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
         with:
-          path: dist
+          path: apps/web/dist
 
   deploy:
     # En pull requests solo interesa saber si compila; publicar el sitio

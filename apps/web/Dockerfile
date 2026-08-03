@@ -1,9 +1,19 @@
 # syntax=docker/dockerfile:1.7
 
-# sgf-app es una SPA de React + Vite sin backend: lo que produce `vite build`
-# son ficheros estáticos. Node solo hace falta para compilarlos, así que la
-# imagen final no lo lleva; se queda en nginx sirviendo dist/. De ahí el build
-# multietapa: la imagen resultante pesa decenas de MB en vez de cientos.
+# apps/web es una SPA de React + Vite: lo que produce `vite build` son ficheros
+# estáticos. Node solo hace falta para compilarlos, así que la imagen final no
+# lo lleva; se queda en nginx sirviendo dist/. De ahí el build multietapa: la
+# imagen resultante pesa decenas de MB en vez de cientos.
+#
+# El contexto de build es este directorio, no la raíz del monorepo: la app es
+# autónoma -su package.json y su lockfile están aquí- y no necesita ver nada de
+# fuera. Desde la raíz del repositorio:
+#
+#   docker build -t sgf-web apps/web
+#   docker run --rm -p 8080:8080 sgf-web
+#
+# El mismo criterio vale para el resto de apps: cada una se construye desde su
+# propio directorio, con las herramientas de su lenguaje.
 
 ARG NODE_IMAGE=node:22-alpine
 ARG NGINX_IMAGE=nginx:1.29-alpine
@@ -141,12 +151,15 @@ http {
 NGINX
 
 # `nginx -t` valida la configuración durante el build: un error de sintaxis
-# rompe aquí y no en el primer `docker run`. Los directorios temporales se
-# crean y se ceden después, porque el propio test los crearía como root y
-# entonces el usuario sin privilegios no podría escribir en ellos.
+# rompe aquí y no en el primer `docker run`.
+# El mkdir tiene que ir ANTES del test: aunque `nginx -t` no arranca el
+# servidor, sí abre el fichero indicado en `pid`, y con /tmp/nginx inexistente
+# falla con "open() /tmp/nginx/nginx.pid failed (2: No such file or
+# directory)". El chown va después porque el test crea sus ficheros como root
+# y el usuario sin privilegios no podría escribir en ellos.
 RUN rm -f /etc/nginx/conf.d/default.conf \
-    && nginx -t \
     && mkdir -p /tmp/nginx \
+    && nginx -t \
     && chown -R nginx:nginx /tmp/nginx /var/cache/nginx
 
 # Sin --chown: los ficheros se quedan de root y el proceso solo los lee, que es

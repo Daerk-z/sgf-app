@@ -1,0 +1,175 @@
+# Entorno de DESARROLLO del monorepo. No sirve para producción: levanta el dev
+# server de Vite con el código montado desde el host y HMR. Lo que se despliega
+# es apps/web/Dockerfile, que compila el bundle y lo sirve con nginx.
+#
+#   docker compose -f compose.dev.yaml up web    -> http://localhost:5173/sgf-app/
+#   docker compose -f compose.dev.yaml down
+#
+# Comandos sueltos, sin instalar Node en la máquina:
+#   docker compose -f compose.dev.yaml run --rm web npm run lint
+#   docker compose -f compose.dev.yaml run --rm web npm run build
+#
+# Este fichero es lo único que hay a nivel de monorepo, y a propósito: cada app
+# se construye y se ejecuta con las herramientas de su lenguaje, sin nada por
+# encima que las orqueste. Lo que aporta compose es poder levantarlas juntas,
+# en una sola red y con un solo ciclo de vida, sea cual sea ese lenguaje. Ver
+# el bloque comentado del final.
+#
+# La imagen de producción de la web se construye desde su propio directorio:
+#   docker build -t sgf-web apps/web
+#
+# VARIABLES DE ENTORNO
+# Ojo, aquí hay dos ficheros .env distintos y es fácil confundirlos:
+#
+#   .env  (junto a este fichero)  -> lo lee COMPOSE para interpolar ${...},
+#                                    como SGF_DEV_PORT. No llega a la app.
+#   apps/web/.env                 -> lo lee VITE, porque es la raíz de su
+#                                    proyecto. Es el de las variables de la
+#                                    aplicación. El env_file de abajo lo deja
+#                                    además en el entorno del proceso.
+#
+# La aplicación web no necesita ninguna hoy. El único import.meta.env que usa
+# el código es BASE_URL (apps/web/src/router.jsx), y ese valor no sale del
+# entorno sino de `base` en apps/web/vite.config.js, que Vite congela en el
+# bundle al compilar.
+#
+# Si algún día hace falta una variable de aplicación en la web:
+#   1. Tiene que llamarse VITE_ALGO. Vite solo expone al cliente las que
+#      llevan ese prefijo, precisamente para no filtrar secretos al bundle.
+#   2. Va en apps/web/.env, que está en .gitignore.
+#   3. Acaba escrita en claro dentro del JavaScript que descarga el navegador.
+#      Ahí no se pone nada que sea secreto: ni claves de API, ni credenciales.
+#      Los secretos del backend, cuando exista, no se comparten con este
+#      servicio: cada servicio declara los suyos.
+
+name: sgf-app
+
+services:
+  web:
+    # react-router 8 declara engines.node >= 22.22.0, así que con Node 20 falla
+    # la instalación. La versión está repetida a propósito en tres sitios
+    # -aquí, en el ARG NODE_IMAGE de apps/web/Dockerfile y en el node-version
+    # del workflow de Pages- porque el Dockerfile describe el despliegue y no
+    # tiene por qué cargar con las necesidades del entorno de desarrollo. El
+    # precio es que al subir de major hay que tocar los tres; si divergen, se
+    # estaría desarrollando sobre un Node distinto del que compila lo que se
+    # publica.
+    image: node:22-alpine
+    working_dir: /app
+
+    # npm ci en cada arranque mantiene node_modules alineado con el lockfile;
+    # la caché de npm es un volumen, así que solo la primera vez es lenta.
+    #
+    # --host 0.0.0.0 no es opcional: por defecto Vite escucha solo en
+    # localhost, que dentro del contenedor es el propio contenedor, y el puerto
+    # publicado no llegaría a nada. El `--` separa los argumentos de npm de los
+    # que van a vite.
+    #
+    # exec para que vite quede como PID 1 y reciba el SIGTERM de `down` en
+    # lugar de morir por timeout diez segundos después.
+    command: sh -c "npm ci --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0"
+
+    ports:
+      # SGF_DEV_PORT solo cambia el puerto del host, por si el 5173 está
+      # ocupado. Dentro del contenedor Vite sigue en 5173.
+      - "${SGF_DEV_PORT:-5173}:5173"
+
+    volumes:
+      # Se monta solo apps/web, no el monorepo entero: la app es autónoma y no
+      # necesita ver el resto. Editar en el host dispara el HMR del contenedor.
+      - ./apps/web:/app
+      # node_modules NO puede venir del host. Aquí está compilado contra glibc
+      # (Debian) y el contenedor es Alpine/musl: los binarios de rolldown
+      # reventarían. Este volumen lo tapa y lo rellena el npm ci de arriba.
+      - web_node_modules:/app/node_modules
+      # Caché de npm entre arranques, para que el npm ci del command no baje
+      # el árbol de dependencias entero cada vez.
+      - npm_cache:/root/.npm
+
+    environment:
+      # Explícito y al revés que en el Dockerfile: aquí NO puede valer
+      # production, o npm omitiría las devDependencies, que es donde están
+      # vite y sus plugins, y no habría dev server que arrancar.
+      NODE_ENV: development
+
+      # Trazas del propio Vite cuando algo no cuadra (resolución de módulos,
+      # transformaciones, HMR que no llega).
+      # DEBUG: vite:*
+
+      # Solo si se entra al dev server con un nombre que no sea localhost
+      # (una IP de la LAN, un túnel, otro contenedor). Vite rechaza el resto de
+      # cabeceras Host para evitar ataques de DNS rebinding. Es API interna de
+      # Vite; la vía estable es server.allowedHosts en vite.config.js.
+      # __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: mi-equipo.local
+
+      # Ejemplo de variable de aplicación, cuando exista un backend al que
+      # apuntar. Ver la nota de la cabecera antes de añadir ninguna.
+      # VITE_API_URL: http://localhost:8080
+
+    # El .env de la app, si existe. required: false porque el proyecto no trae
+    # ninguno y sin eso compose falla al no encontrar el fichero. Vite lee ese
+    # mismo fichero por su cuenta desde el bind mount; esto solo lo añade
+    # además al entorno del proceso.
+    env_file:
+      - path: apps/web/.env
+        required: false
+
+    # Vite imprime la URL al arrancar y limpia la pantalla: sin tty la salida
+    # sale rota. stdin_open deja además usar Ctrl+C limpiamente.
+    stdin_open: true
+    tty: true
+
+    # tini como PID 1: recoge los procesos huérfanos que va dejando el
+    # optimizador de dependencias de Vite al reiniciarse.
+    init: true
+
+  # ---------------------------------------------------------------------------
+  # Plantilla para el backend, cuando exista apps/api. Se deja comentada porque
+  # el directorio todavía no está creado y compose fallaría al montarlo.
+  #
+  # Está escrita para Java/Gradle, que es hacia donde apunta el backend. No
+  # comparte NADA con el servicio de arriba -ni imagen, ni volúmenes, ni
+  # gestor de dependencias- y así es como tiene que ser: cada app trae su
+  # propio ecosistema y compose solo las pone en la misma red.
+  #
+  # La web llega al backend por el nombre del servicio (http://api:8080) desde
+  # dentro de la red que compose crea sola; desde el navegador, por el puerto
+  # publicado. Lo que se ponga en VITE_API_URL viaja al cliente, así que tiene
+  # que ser la URL vista desde el host, no la interna.
+  #
+  # api:
+  #   image: eclipse-temurin:21-jdk
+  #   working_dir: /app
+  #   command: ./gradlew bootRun --continuous
+  #   ports:
+  #     - "${SGF_API_PORT:-8080}:8080"
+  #   volumes:
+  #     - ./apps/api:/app
+  #     # Equivalente al volumen de node_modules: la caché de Gradle no puede
+  #     # venir del host ni rehacerse en cada arranque.
+  #     - gradle_cache:/root/.gradle
+  #   env_file:
+  #     - path: apps/api/.env
+  #       required: false
+  #   init: true
+  #
+  # Si la API necesita base de datos, el servicio va aquí y la API espera por
+  # él con depends_on + condition: service_healthy. Los datos, en un volumen
+  # con nombre; nunca en un bind mount del repositorio.
+
+volumes:
+  web_node_modules:
+  # gradle_cache:
+  npm_cache:
+
+# NOTA para macOS, Windows y WSL2: si al guardar un fichero no se refresca el
+# navegador, es que los eventos inotify no cruzan el bind mount. CHOKIDAR_USEPOLLING
+# no sirve aquí -Vite no lee esa variable, es cosa de webpack/CRA-: el arreglo
+# es añadir a apps/web/vite.config.js
+#     server: { watch: { usePolling: true } }
+# Cuesta CPU, así que no se deja puesto por defecto: en Linux no hace falta.
+#
+# La app de escritorio (apps/desktop, tipo Electron/Tauri) no encaja bien aquí:
+# necesita servidor gráfico y acceso al hardware del anfitrión, así que se
+# ejecuta en el host contra el dev server que levanta este fichero. En compose
+# solo tendría sentido un servicio para compilar sus binarios.

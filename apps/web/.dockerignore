@@ -1,5 +1,10 @@
 # Todo lo que no necesita `vite build`. Cuanto menos entra en el contexto,
 # menos tarda `docker build` y menos se invalida la caché de capas.
+#
+# Vive aquí, junto al Dockerfile, porque el contexto de build es este
+# directorio: la app es autónoma y no necesita nada de la raíz del monorepo.
+# Docker solo lee el .dockerignore del directorio del contexto, así que uno en
+# la raíz no se aplicaría. Cada app que se añada traerá el suyo.
 
 # node_modules se reinstala dentro de la imagen con npm ci: copiar el de la
 # máquina local, además de ser lo más pesado del contexto, arrastraría binarios
@@ -7,14 +12,6 @@
 node_modules
 dist
 dist-ssr
-
-.git
-.gitignore
-.github
-
-# El sitio estático original: se conserva como referencia histórica, pero no
-# entra en el bundle (el entry point es index.html + src/).
-legacy
 
 Dockerfile
 .dockerignore
@@ -30,7 +27,6 @@ README.md
 npm-debug.log*
 .vite/
 *.local
-*.zip
 
 .vscode
 .idea

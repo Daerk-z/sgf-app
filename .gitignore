@@ -7,6 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Un patrón sin barra casa a cualquier profundidad, así que estas cuatro líneas
+# cubren el node_modules y el dist de cualquier app, esté donde esté. No hace
+# falta repetirlas por directorio.
 node_modules
 dist
 dist-ssr
