@@ -10,9 +10,14 @@ import { PedidosPage } from "./pages/Pedidos.page.jsx";
 import { ConfiguracionPage } from "./pages/Configuracion.page.jsx";
 import { NotFoundPage } from "./pages/NotFound.page.jsx";
 
+// `basename` toma el valor de `base` en vite.config.js. Sin él, al publicar
+// bajo /sgf-app/ react-router compararía "/sgf-app/login" contra la ruta
+// "/login", no encontraría ninguna coincidencia y mostraría NotFoundPage en
+// absolutamente todas las URLs. Leerlo de BASE_URL evita tener el prefijo
+// escrito a mano en dos sitios distintos.
 export function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         {/* La raíz no tiene pantalla propia: redirige al login.
             `replace` evita dejar "/" en el historial, para que el botón
