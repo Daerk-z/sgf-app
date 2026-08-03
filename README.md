@@ -9,10 +9,10 @@ empaquetado de escritorio sin volver a mover nada de sitio.
 ```
 .
 ├── apps/                 Aplicaciones desplegables (cada una con su Dockerfile)
-│   └── web/              SPA de React + Vite  ->  @sgf/web
-├── packages/             Código compartido entre apps (todavía vacío)
-├── legacy/               Sitio estático original, previo a React. Referencia
+│   ├── web/              SPA de React + Vite  ->  @sgf/web
+│   └── web-legacy/       Sitio estático original, previo a React. Referencia
 │                         histórica: no se compila ni se despliega.
+├── packages/             Código compartido entre apps (todavía vacío)
 ├── compose.dev.yaml      Entorno de desarrollo de todo el monorepo
 ├── package.json          Raíz de npm workspaces: no tiene código propio
 └── package-lock.json     Único lockfile del repositorio

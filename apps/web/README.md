@@ -2,7 +2,7 @@
 
 Frontend de SGF: SPA de React 19 + Vite, con el React Compiler activado y
 `react-router` resolviendo las rutas en el cliente. Es la migración a React del
-sitio estático que se conserva en `legacy/`, en la raíz del monorepo.
+sitio estático que se conserva en `apps/web-legacy/`.
 
 ## Comandos
 

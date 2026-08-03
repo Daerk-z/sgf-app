@@ -26,7 +26,7 @@ dist
 
 # El sitio estático original: se conserva como referencia histórica, pero no
 # entra en ningún bundle (el entry point de la web es apps/web/index.html).
-legacy
+apps/web-legacy
 
 **/Dockerfile
 .dockerignore

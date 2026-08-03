@@ -1,8 +1,7 @@
 # apps/
 
-Aplicaciones ejecutables o desplegables. Cada subdirectorio es un workspace de
-npm independiente, con su propio `package.json`, sus dependencias y, si se
-despliega, su propio `Dockerfile`.
+Aplicaciones ejecutables o desplegables. Cada una vive en su subdirectorio con
+sus dependencias y, si se despliega, su propio `Dockerfile`.
 
 La regla para decidir si algo va aquí: **una app se arranca o se despliega; un
 paquete solo se importa**. Lo segundo va en `packages/`.
@@ -10,11 +9,17 @@ paquete solo se importa**. Lo segundo va en `packages/`.
 | Directorio      | Estado    | Qué es                                          |
 | --------------- | --------- | ----------------------------------------------- |
 | `web/`          | Existe    | SPA de React + Vite, publicada en GitHub Pages   |
+| `web-legacy/`   | Existe    | Sitio estático original, previo a React          |
 | `api/`          | Pendiente | Backend. Nombre previsto: `@sgf/api`             |
 | `desktop/`      | Pendiente | Empaquetado de escritorio (Electron/Tauri) de la web |
 
 Las dos últimas filas son solo la convención acordada: los directorios no
 existen todavía y no hay nada que inicializar hasta que se empiecen.
+
+`web-legacy/` es la excepción a todo lo que sigue: HTML, CSS y JS sueltos, sin
+`package.json`, sin build y sin despliegue. Se conserva como referencia de la
+migración a React. El glob `apps/*` de la raíz solo recoge como workspace lo
+que tiene `package.json`, así que npm lo ignora sin protestar.
 
 ## Convenciones
 
