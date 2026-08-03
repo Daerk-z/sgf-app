@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 
 // Paleta visual consistente con el resto de la app
@@ -58,20 +58,23 @@ const initialForm = {
   telefono: "",
 };
 
+// Misma lógica que el <script> original: si la URL trae ?error=..., se muestra
+// el banner. Se lee una sola vez al montar, como valor inicial del estado, en
+// vez de con un useEffect que dispara un render extra.
+// URLSearchParams.get() ya devuelve el valor decodificado: pasarlo otra vez
+// por decodeURIComponent() rompía con textos que contienen '%'.
+function initialErrorFromUrl() {
+  return new URLSearchParams(window.location.search).get("error") || "";
+}
+
 export function RegisterForm({ action = "registro", onSubmit }) {
   const [form, setForm] = useState(initialForm);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialErrorFromUrl);
   const [focusField, setFocusField] = useState(null);
+  const [enviando, setEnviando] = useState(false);
   const navigate = useNavigate();
 
   const currentDocType = docTypes.find((d) => d.value === form.tipoDocumento) || docTypes[0];
-
-  // Misma lógica que el <script> original: si la URL trae ?error=..., se muestra el banner
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const errorMsg = params.get("error");
-    if (errorMsg) setError(decodeURIComponent(errorMsg));
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,7 +87,7 @@ export function RegisterForm({ action = "registro", onSubmit }) {
     setForm((prev) => ({ ...prev, tipoDocumento: e.target.value, documento: "" }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -99,13 +102,29 @@ export function RegisterForm({ action = "registro", onSubmit }) {
 
     if (onSubmit) {
       onSubmit(form);
-    } else {
-      // Comportamiento por defecto: enviar como el <form action="registro" method="POST"> original
-      fetch(action, {
+      return;
+    }
+
+    // Comportamiento por defecto: enviar como el <form action="registro" method="POST"> original.
+    setEnviando(true);
+    try {
+      const res = await fetch(action, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams(form).toString(),
-      }).catch(() => setError("No se pudo conectar con el servidor"));
+      });
+      // fetch() solo rechaza ante fallos de red: un 404 o un 500 llegan aquí
+      // como respuesta "exitosa". Sin este chequeo el formulario no mostraba
+      // nada al enviarlo y parecía que el botón no hacía nada.
+      if (!res.ok) {
+        setError(`No se pudo registrar el usuario (error ${res.status})`);
+        return;
+      }
+      navigate("/login");
+    } catch {
+      setError("No se pudo conectar con el servidor");
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -228,6 +247,7 @@ export function RegisterForm({ action = "registro", onSubmit }) {
 
           <button
             type="submit"
+            disabled={enviando}
             style={{
               display: "block",
               width: "100%",
@@ -240,21 +260,21 @@ export function RegisterForm({ action = "registro", onSubmit }) {
               textAlign: "center",
               borderRadius: "12px",
               border: "none",
-              cursor: "pointer",
+              cursor: enviando ? "progress" : "pointer",
+              opacity: enviando ? 0.7 : 1,
             }}
             onMouseOver={(e) => (e.currentTarget.style.background = colors.accentHover)}
             onMouseOut={(e) => (e.currentTarget.style.background = colors.accent)}
           >
-            Registrar usuario
+            {enviando ? "Registrando…" : "Registrar usuario"}
           </button>
         </form>
 
-        <a
-          href="consultar"
-          style={{ display: "block", textAlign: "center", fontSize: "14px", color: colors.label, textDecoration: "none", marginTop: "20px" }}
-        >
-          Ver usuarios registrados
-        </a>
+        {/* Aquí iba <a href="consultar">Ver usuarios registrados</a>, heredado
+            del HTML legacy. Como ancla real provocaba una recarga completa a
+            /consultar, que no existe como ruta ni como endpoint, y dejaba la
+            pantalla en blanco. Debe volver como <Link to="..."> cuando exista
+            la pantalla de consulta de usuarios. */}
 
         <button
           type="button"

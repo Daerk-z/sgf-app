@@ -73,7 +73,7 @@ export function LoginPage() {
             onClick={() => navigate("/register")}
           >
             Registrarse
-        </button>     
+          </button>
         </form>
       </div>
     </div>
