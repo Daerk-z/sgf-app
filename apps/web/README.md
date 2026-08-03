@@ -6,17 +6,17 @@ sitio estático que se conserva en `apps/web-legacy/`.
 
 ## Comandos
 
-Se ejecutan desde la raíz del monorepo, que es donde vive el lockfile:
+La app es autónoma: su `package.json`, su lockfile y su `node_modules` están
+aquí, y no depende de nada de la raíz del monorepo. Todo se ejecuta desde este
+directorio:
 
 ```bash
-npm run dev                              # dev server -> http://localhost:5173/sgf-app/
-npm run build --workspace apps/web       # bundle en apps/web/dist
-npm run lint --workspace apps/web
-npm run preview --workspace apps/web     # sirve el bundle ya compilado
+npm install
+npm run dev          # dev server -> http://localhost:5173/sgf-app/
+npm run build        # bundle en apps/web/dist
+npm run lint
+npm run preview      # sirve el bundle ya compilado
 ```
-
-Desde `apps/web/` los scripts cortos (`npm run dev`) también funcionan: npm
-encuentra los binarios en el `node_modules` de la raíz.
 
 ## Base de las rutas
 
@@ -32,12 +32,12 @@ arrancar el contenedor: se pasa como argumento de build.
 
 El `Dockerfile` de esta carpeta compila con Node y sirve el resultado con nginx
 —sin Node en la imagen final—, en el puerto 8080 y como usuario sin
-privilegios. Se construye **desde la raíz del monorepo**, porque el `npm ci`
-necesita el lockfile de allí:
+privilegios. El contexto de build es este directorio, así que desde la raíz del
+repositorio:
 
 ```bash
-docker build -f apps/web/Dockerfile -t sgf-web .
-docker build -f apps/web/Dockerfile --build-arg BASE_PATH=/sgf-app/ -t sgf-web .
+docker build -t sgf-web apps/web
+docker build --build-arg BASE_PATH=/sgf-app/ -t sgf-web apps/web
 ```
 
 ## Estructura

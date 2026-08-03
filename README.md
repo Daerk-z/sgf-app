@@ -8,75 +8,73 @@ empaquetado de escritorio sin volver a mover nada de sitio.
 
 ```
 .
-├── apps/                 Aplicaciones desplegables (cada una con su Dockerfile)
-│   ├── web/              SPA de React + Vite  ->  @sgf/web
+├── apps/                 Aplicaciones ejecutables o desplegables
+│   ├── web/              SPA de React + Vite
 │   └── web-legacy/       Sitio estático original, previo a React. Referencia
 │                         histórica: no se compila ni se despliega.
 ├── packages/             Código compartido entre apps (todavía vacío)
-├── compose.dev.yaml      Entorno de desarrollo de todo el monorepo
-├── package.json          Raíz de npm workspaces: no tiene código propio
-└── package-lock.json     Único lockfile del repositorio
+└── compose.dev.yaml      Levanta el conjunto en desarrollo
 ```
 
-El repositorio usa [npm workspaces][workspaces], que viene con npm y no
-necesita instalar nada más. Las dependencias se declaran en el `package.json`
-de cada workspace, pero se resuelven en un único árbol y un único lockfile en
-la raíz: por eso `npm install` se ejecuta siempre desde aquí arriba, y por eso
-el contexto de los `docker build` es también la raíz.
+## Cómo funciona: cada app es autónoma
 
-[workspaces]: https://docs.npmjs.com/cli/using-npm/workspaces
+No hay ninguna herramienta que orqueste el monorepo, y es deliberado. **Cada
+aplicación se construye y se ejecuta con las herramientas de su propio
+lenguaje, desde su propio directorio.** El backend será previsiblemente Java,
+así que cualquier capa por encima -npm workspaces, Nx, Bazel- tendría que
+cubrir dos ecosistemas que no se mezclan, a cambio de una complejidad que a
+esta escala no se paga sola.
 
-## Requisitos
+De ahí tres reglas que conviene mantener:
 
-Node >= 22.22.0 (lo exige `react-router` 8) y npm 10. Alternativamente, Docker:
-con `compose.dev.yaml` no hace falta tener Node instalado en la máquina.
+1. **Nada en la raíz gestiona dependencias.** No hay `package.json` arriba. Las
+   de la web están en `apps/web/package.json`, con su propio lockfile; las del
+   futuro backend estarán en su `build.gradle`/`pom.xml`.
+2. **Cada app tiene que poder construirse sola, con su herramienta nativa.**
+   Quien trabaje en el backend no debería necesitar Node instalado, ni quien
+   trabaje en la web necesitar un JDK.
+3. **Lo único común es `compose.dev.yaml`**, y solo para levantarlas juntas en
+   una misma red. No compila nada.
 
-## Puesta en marcha
+Si algún día hace falta un `task build` que lo construya todo de una vez, la
+respuesta es un lanzador de tareas fino en la raíz (`Taskfile.yml`, `Makefile`)
+que delegue en `npm` y en `./gradlew`. Nunca una herramienta que reemplace a
+ninguna de las dos.
+
+## La aplicación web
+
+Requisitos: Node >= 22.22.0 (lo exige `react-router` 8) y npm 10.
 
 ```bash
-npm install                 # instala TODOS los workspaces, desde la raíz
-npm run dev                 # dev server de la web -> http://localhost:5173/sgf-app/
+cd apps/web
+npm install
+npm run dev          # -> http://localhost:5173/sgf-app/
+npm run build        # bundle en apps/web/dist
+npm run lint
 ```
 
 La ruta lleva `/sgf-app/` porque el sitio se publica en un subdirectorio de
 GitHub Pages y la base se fija igual en desarrollo, para que la aplicación se
 comporte igual en los dos entornos.
 
-### Con Docker, sin instalar Node
+Ver `apps/web/README.md` para el detalle.
+
+### Sin instalar Node: Docker
 
 ```bash
 docker compose -f compose.dev.yaml up web
 docker compose -f compose.dev.yaml run --rm web npm run lint
 ```
 
-## Scripts de la raíz
-
-| Script            | Qué hace                                                  |
-| ----------------- | --------------------------------------------------------- |
-| `npm run dev`     | Dev server de `apps/web`                                   |
-| `npm run build`   | Compila todos los workspaces que tengan script `build`     |
-| `npm run build:web` | Compila solo `apps/web` (deja el bundle en `apps/web/dist`) |
-| `npm run lint`    | Pasa el linter por todos los workspaces                    |
-| `npm run preview` | Sirve el bundle ya compilado de `apps/web`                 |
-
-Para trabajar contra un workspace concreto, sin moverse de la raíz:
-
-```bash
-npm run <script> --workspace apps/web
-npm install <paquete> --workspace apps/web   # dependencia de la app, no de la raíz
-```
-
-Una dependencia instalada en la raíz sin `--workspace` es una herramienta del
-repositorio (linters, formateadores), no de las aplicaciones.
+Este es el comando que se ejecuta desde la raíz; el resto de apps se añadirán
+como servicios del mismo fichero.
 
 ## Imagen de producción
 
-Cada app trae su propio Dockerfile, pero **se construyen desde la raíz**: el
-`npm ci` de dentro necesita el lockfile del monorepo, que no es visible desde
-el subdirectorio de la app.
+Cada app trae su propio Dockerfile y se construye desde su propio directorio:
 
 ```bash
-docker build -f apps/web/Dockerfile -t sgf-web .
+docker build -t sgf-web apps/web
 docker run --rm -p 8080:8080 sgf-web            # http://localhost:8080/
 ```
 
@@ -88,20 +86,23 @@ Para reproducir exactamente lo que se publica en Pages,
 ## Despliegue
 
 `.github/workflows/deploy.yml` compila `apps/web` y lo publica en GitHub Pages
-en cada push a `main`. En los pull requests el workflow solo compila y pasa el
-linter, sin publicar.
+en cada push a `main`. En los pull requests solo compila y pasa el linter, sin
+publicar.
+
+Ese workflow es exclusivo de la web. Cada app que se añada traerá el suyo: no
+hay un pipeline único, igual que no hay un build único.
 
 ## Añadir una aplicación nueva
 
-1. Crear `apps/<nombre>/package.json` con `"name": "@sgf/<nombre>"` y
-   `"private": true`. El glob `apps/*` de la raíz la recoge sola: no hay que
-   registrarla en ninguna lista.
-2. `npm install` desde la raíz para que entre en el lockfile.
-3. Si se despliega, su `Dockerfile` va dentro de `apps/<nombre>/` y se
-   construye con `-f apps/<nombre>/Dockerfile .` desde la raíz.
-4. Si necesita levantarse en desarrollo junto al resto, añadir el servicio en
-   `compose.dev.yaml`: ahí hay una plantilla comentada, con la nota sobre el
-   volumen de `node_modules` que hace falta por workspace.
+1. Crear `apps/<nombre>/` con el manifiesto que le corresponda a su lenguaje
+   (`package.json`, `pom.xml`, `build.gradle.kts`...). No hay que registrarla
+   en ninguna lista de la raíz, porque no existe tal lista.
+2. Si se despliega, su `Dockerfile` va dentro de ese mismo directorio y se
+   construye con `docker build -t <imagen> apps/<nombre>`.
+3. Si necesita levantarse en desarrollo junto al resto, añadir el servicio en
+   `compose.dev.yaml`: hay una plantilla comentada para el backend.
+4. Si tiene CI, un workflow propio en `.github/workflows/`, filtrado por
+   `paths: apps/<nombre>/**` para que no se dispare con cambios ajenos.
 
 Ver `apps/README.md` y `packages/README.md` para el reparto entre una carpeta
 y otra.

@@ -9,29 +9,34 @@
 #   docker compose -f compose.dev.yaml run --rm web npm run lint
 #   docker compose -f compose.dev.yaml run --rm web npm run build
 #
-# Este fichero vive en la raíz y no dentro de apps/web a propósito: es el punto
-# desde el que se levanta el conjunto. Cuando existan más apps (una API, un
-# empaquetado de escritorio) se añaden aquí como servicios y `up` las arranca
-# juntas, con una sola red y un solo ciclo de vida. Ver el bloque comentado del
-# final.
+# Este fichero es lo único que hay a nivel de monorepo, y a propósito: cada app
+# se construye y se ejecuta con las herramientas de su lenguaje, sin nada por
+# encima que las orqueste. Lo que aporta compose es poder levantarlas juntas,
+# en una sola red y con un solo ciclo de vida, sea cual sea ese lenguaje. Ver
+# el bloque comentado del final.
 #
-# La imagen de producción se construye desde esta misma raíz, porque el
-# contexto tiene que incluir el lockfile del monorepo:
-#   docker build -f apps/web/Dockerfile -t sgf-web .
+# La imagen de producción de la web se construye desde su propio directorio:
+#   docker build -t sgf-web apps/web
 #
 # VARIABLES DE ENTORNO
-# La aplicación web no necesita ninguna. El único import.meta.env que usa el
-# código es BASE_URL (apps/web/src/router.jsx), y ese valor no sale del entorno
-# sino de `base` en apps/web/vite.config.js, que Vite congela en el bundle al
-# compilar. Todo lo que hay debajo es configuración de herramientas, no de la
-# app.
+# Ojo, aquí hay dos ficheros .env distintos y es fácil confundirlos:
+#
+#   .env  (junto a este fichero)  -> lo lee COMPOSE para interpolar ${...},
+#                                    como SGF_DEV_PORT. No llega a la app.
+#   apps/web/.env                 -> lo lee VITE, porque es la raíz de su
+#                                    proyecto. Es el de las variables de la
+#                                    aplicación. El env_file de abajo lo deja
+#                                    además en el entorno del proceso.
+#
+# La aplicación web no necesita ninguna hoy. El único import.meta.env que usa
+# el código es BASE_URL (apps/web/src/router.jsx), y ese valor no sale del
+# entorno sino de `base` en apps/web/vite.config.js, que Vite congela en el
+# bundle al compilar.
 #
 # Si algún día hace falta una variable de aplicación en la web:
 #   1. Tiene que llamarse VITE_ALGO. Vite solo expone al cliente las que
 #      llevan ese prefijo, precisamente para no filtrar secretos al bundle.
-#   2. Va en un .env en la raíz del monorepo, que está en .gitignore. Vite lo
-#      lee desde el bind mount, y el env_file de abajo la deja además en el
-#      entorno del proceso.
+#   2. Va en apps/web/.env, que está en .gitignore.
 #   3. Acaba escrita en claro dentro del JavaScript que descarga el navegador.
 #      Ahí no se pone nada que sea secreto: ni claves de API, ni credenciales.
 #      Los secretos del backend, cuando exista, no se comparten con este
@@ -48,18 +53,12 @@ services:
     # tiene por qué cargar con las necesidades del entorno de desarrollo. El
     # precio es que al subir de major hay que tocar los tres; si divergen, se
     # estaría desarrollando sobre un Node distinto del que compila lo que se
-    # publica. La raíz declara ese mínimo en engines.node.
+    # publica.
     image: node:22-alpine
-
-    # El cwd es la raíz del monorepo, no apps/web: npm workspaces necesita ver
-    # el package.json de arriba para resolver el árbol de dependencias.
     working_dir: /app
 
     # npm ci en cada arranque mantiene node_modules alineado con el lockfile;
-    # la caché de npm es un volumen, así que solo la primera vez es lenta. Se
-    # instala el monorepo entero -sin --workspace- porque en desarrollo se
-    # trabaja con todo a mano, al revés que en la imagen de producción, que
-    # acota la instalación a lo que compila.
+    # la caché de npm es un volumen, así que solo la primera vez es lenta.
     #
     # --host 0.0.0.0 no es opcional: por defecto Vite escucha solo en
     # localhost, que dentro del contenedor es el propio contenedor, y el puerto
@@ -68,7 +67,7 @@ services:
     #
     # exec para que vite quede como PID 1 y reciba el SIGTERM de `down` en
     # lugar de morir por timeout diez segundos después.
-    command: sh -c "npm ci --no-audit --no-fund && exec npm run dev --workspace apps/web -- --host 0.0.0.0"
+    command: sh -c "npm ci --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0"
 
     ports:
       # SGF_DEV_PORT solo cambia el puerto del host, por si el 5173 está
@@ -76,22 +75,13 @@ services:
       - "${SGF_DEV_PORT:-5173}:5173"
 
     volumes:
-      # El monorepo entero en vivo: editar en el host dispara el HMR del
-      # contenedor. Se monta la raíz y no apps/web porque npm workspaces
-      # necesita el package.json y el lockfile de arriba.
-      - .:/app
+      # Se monta solo apps/web, no el monorepo entero: la app es autónoma y no
+      # necesita ver el resto. Editar en el host dispara el HMR del contenedor.
+      - ./apps/web:/app
       # node_modules NO puede venir del host. Aquí está compilado contra glibc
       # (Debian) y el contenedor es Alpine/musl: los binarios de rolldown
-      # reventarían. Estos volúmenes lo tapan y los rellena el npm ci de
-      # arriba.
-      #
-      # Hacen falta dos rutas: npm workspaces sube ("hoists") casi todo a la
-      # raíz, pero deja en el workspace lo que no puede compartir -versiones en
-      # conflicto, enlaces de .bin-, y ese directorio quedaría tapado por el
-      # bind mount de la línea de arriba. Cada workspace nuevo que se añada
-      # necesita su propia línea.
-      - root_node_modules:/app/node_modules
-      - web_node_modules:/app/apps/web/node_modules
+      # reventarían. Este volumen lo tapa y lo rellena el npm ci de arriba.
+      - web_node_modules:/app/node_modules
       # Caché de npm entre arranques, para que el npm ci del command no baje
       # el árbol de dependencias entero cada vez.
       - npm_cache:/root/.npm
@@ -114,14 +104,14 @@ services:
 
       # Ejemplo de variable de aplicación, cuando exista un backend al que
       # apuntar. Ver la nota de la cabecera antes de añadir ninguna.
-      # VITE_API_URL: http://api:8000
+      # VITE_API_URL: http://localhost:8080
 
-    # El .env de la raíz, si existe. required: false porque el proyecto no
-    # trae ninguno y sin eso compose falla al no encontrar el fichero.
-    # Ojo: compose lee ese mismo .env para interpolar ${SGF_DEV_PORT}, así que
-    # el fichero acaba teniendo dos consumidores distintos.
+    # El .env de la app, si existe. required: false porque el proyecto no trae
+    # ninguno y sin eso compose falla al no encontrar el fichero. Vite lee ese
+    # mismo fichero por su cuenta desde el bind mount; esto solo lo añade
+    # además al entorno del proceso.
     env_file:
-      - path: .env
+      - path: apps/web/.env
         required: false
 
     # Vite imprime la URL al arrancar y limpia la pantalla: sin tty la salida
@@ -134,30 +124,32 @@ services:
     init: true
 
   # ---------------------------------------------------------------------------
-  # Plantilla para la API, cuando exista apps/api. Se deja comentada porque el
-  # workspace todavía no está creado y compose fallaría al montarlo.
+  # Plantilla para el backend, cuando exista apps/api. Se deja comentada porque
+  # el directorio todavía no está creado y compose fallaría al montarlo.
   #
-  # Con el servicio activo, la web llega al backend por el nombre del servicio
-  # (http://api:8000) dentro de la red que compose crea sola; desde el host,
-  # por el puerto publicado. Lo que se ponga en VITE_API_URL viaja al navegador
-  # y por tanto tiene que ser la URL vista desde el host, no desde la red
-  # interna.
+  # Está escrita para Java/Gradle, que es hacia donde apunta el backend. No
+  # comparte NADA con el servicio de arriba -ni imagen, ni volúmenes, ni
+  # gestor de dependencias- y así es como tiene que ser: cada app trae su
+  # propio ecosistema y compose solo las pone en la misma red.
+  #
+  # La web llega al backend por el nombre del servicio (http://api:8080) desde
+  # dentro de la red que compose crea sola; desde el navegador, por el puerto
+  # publicado. Lo que se ponga en VITE_API_URL viaja al cliente, así que tiene
+  # que ser la URL vista desde el host, no la interna.
   #
   # api:
-  #   image: node:22-alpine
+  #   image: eclipse-temurin:21-jdk
   #   working_dir: /app
-  #   command: sh -c "npm ci --no-audit --no-fund && exec npm run dev --workspace apps/api"
+  #   command: ./gradlew bootRun --continuous
   #   ports:
-  #     - "${SGF_API_PORT:-8000}:8000"
+  #     - "${SGF_API_PORT:-8080}:8080"
   #   volumes:
-  #     - .:/app
-  #     - root_node_modules:/app/node_modules
-  #     - api_node_modules:/app/apps/api/node_modules
-  #     - npm_cache:/root/.npm
-  #   environment:
-  #     NODE_ENV: development
+  #     - ./apps/api:/app
+  #     # Equivalente al volumen de node_modules: la caché de Gradle no puede
+  #     # venir del host ni rehacerse en cada arranque.
+  #     - gradle_cache:/root/.gradle
   #   env_file:
-  #     - path: .env
+  #     - path: apps/api/.env
   #       required: false
   #   init: true
   #
@@ -166,9 +158,8 @@ services:
   # con nombre; nunca en un bind mount del repositorio.
 
 volumes:
-  root_node_modules:
   web_node_modules:
-  # api_node_modules:
+  # gradle_cache:
   npm_cache:
 
 # NOTA para macOS, Windows y WSL2: si al guardar un fichero no se refresca el

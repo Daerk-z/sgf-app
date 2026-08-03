@@ -1,0 +1,34 @@
+# Todo lo que no necesita `vite build`. Cuanto menos entra en el contexto,
+# menos tarda `docker build` y menos se invalida la caché de capas.
+#
+# Vive aquí, junto al Dockerfile, porque el contexto de build es este
+# directorio: la app es autónoma y no necesita nada de la raíz del monorepo.
+# Docker solo lee el .dockerignore del directorio del contexto, así que uno en
+# la raíz no se aplicaría. Cada app que se añada traerá el suyo.
+
+# node_modules se reinstala dentro de la imagen con npm ci: copiar el de la
+# máquina local, además de ser lo más pesado del contexto, arrastraría binarios
+# compilados para otra libc y rompería el build en Alpine.
+node_modules
+dist
+dist-ssr
+
+Dockerfile
+.dockerignore
+README.md
+
+# Las variables de entorno de Vite se congelan en el bundle durante el build;
+# dejarlas fuera del contexto evita hornear credenciales locales en la imagen.
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+.vite/
+*.local
+
+.vscode
+.idea
+.DS_Store
+Thumbs.db

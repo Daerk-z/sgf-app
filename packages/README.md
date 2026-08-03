@@ -9,28 +9,30 @@ ejecuta por sí mismo, es una app y va en `apps/`.
 
 Candidatos naturales cuando aparezca el backend:
 
-- Tipos y esquemas de validación del contrato de la API, para que cliente y
-  servidor no los declaren por duplicado y se desincronicen.
+- La especificación OpenAPI del contrato de la API, generando desde ella los
+  tipos de TypeScript para la web y los DTO de Java para el backend. Es el caso
+  más claro: un único artefacto compartido del que dependen dos lenguajes, en
+  lugar de mantener las dos mitades a mano y verlas divergir.
 - Componentes o estilos que compartan la web y la app de escritorio.
 - Configuración común de herramientas (ESLint, por ejemplo), hoy declarada
   entera dentro de `apps/web/eslint.config.js`.
 
-## Cómo se añade uno
+## Cómo se comparte, según el lenguaje
 
-1. `packages/<nombre>/package.json` con `"name": "@sgf/<nombre>"`,
-   `"private": true` y el campo `exports` apuntando a su entrada.
-2. Declararlo como dependencia en quien lo use, con la versión que tenga:
+No hay un mecanismo único, igual que no hay una herramienta única para el
+monorepo. Depende de quién consuma el paquete:
 
-   ```jsonc
-   // apps/web/package.json
-   "dependencies": { "@sgf/<nombre>": "0.0.0" }
-   ```
+- **Solo JavaScript.** Al haber más de un consumidor, es el momento de
+  reintroducir npm workspaces: un `package.json` en la raíz con
+  `"workspaces": ["apps/*", "packages/*"]` y el paquete declarado como
+  dependencia de quien lo use. npm enlaza el directorio en vez de bajar nada
+  del registro. Se quitó precisamente porque con una sola app JS no aportaba
+  nada; volver a ponerlo es un cambio pequeño y local.
+- **Solo Java.** Un módulo más del proyecto Gradle o Maven de `apps/api`, no un
+  directorio aquí.
+- **Los dos lenguajes.** El paquete guarda el artefacto neutro -un `.yaml` de
+  OpenAPI, un esquema JSON- y cada lado genera su código a partir de él con su
+  propio generador, dentro de su propia construcción.
 
-3. `npm install` desde la raíz. npm crea un enlace simbólico al directorio del
-   paquete en vez de bajar nada del registro, así que los cambios se ven al
-   instante sin publicar ni versionar.
-
-Si el paquete necesita compilarse antes de que lo consuma una app, lleva su
-propio script `build`; `npm run build` en la raíz recorre todos los workspaces.
-Cuando ese orden empiece a importar es la señal de que al monorepo le hace
-falta un orquestador de tareas (Turborepo, Nx) — hoy no, con una sola app.
+Lo que no conviene es inventar un mecanismo propio de compartición que ninguna
+de las dos cadenas de construcción entienda.
