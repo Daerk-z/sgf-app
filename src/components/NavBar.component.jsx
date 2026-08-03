@@ -1,5 +1,5 @@
 import { NavLink } from "react-router";
-import styles from "./NavBar.module.css";
+import styles from "../css/components/NavBar.module.css";
 
 // Ítems de navegación principal ("General" en el HTML original).
 // `end: true` en Inicio evita que NavLink lo marque activo cuando en

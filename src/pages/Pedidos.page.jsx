@@ -1,7 +1,8 @@
-// Migrado de legacy/frames/pedidos.html — mismo stub simple que el original
+import styles from "../css/pages/Dashboard.module.css";
+
 export function PedidosPage() {
   return (
-    <div style={{ padding: "18px 22px 22px", color: "#ffffff" }}>
+    <div className={styles.frame} style={{ padding: "18px 22px 22px", color: "#ffffff", background: "transparent", border: "none", boxShadow: "none" }}>
       <h1>Pedidos</h1>
     </div>
   );

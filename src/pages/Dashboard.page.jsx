@@ -1,6 +1,6 @@
 import { Outlet } from "react-router";
 import { NavBar } from "../components/NavBar.component";
-import styles from "./Dashboard.module.css";
+import styles from "../css/pages/Dashboard.module.css";
 
 // Migrado de legacy/index.html. El <iframe name="sgf-frame"> que cargaba
 // contenido.html según el link del sidebar se reemplaza por rutas

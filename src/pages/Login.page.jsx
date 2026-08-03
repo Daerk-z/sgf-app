@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import styles from "./Login.module.css";
+import styles from "../css/pages/Login.module.css";
 
 const initialForm = { correo: "", contrasena: "" };
 
-// Migrado de legacy/inicio-sesion.html. El botón "Ingresar" original era
-// un <a href="index.html">, es decir, no validaba nada, solo navegaba.
-// Se mantiene ese mismo comportamiento (sin backend de auth todavía),
+// El botón "Ingresar" solo navega sin validar (sin backend de auth todavía),
 // pero como una navegación de react-router en vez de una recarga de página.
 export function LoginPage() {
   const [form, setForm] = useState(initialForm);
@@ -32,8 +30,10 @@ export function LoginPage() {
     <div className={styles.screen}>
       <div className={styles.card}>
         <div className={styles.brand}>
-          <i className={`fas fa-chart-bar ${styles.icon}`} />
-          <h1 className={styles.title}>SGF</h1>
+          <div className={styles.brandText}>
+            <i className={`fas fa-chart-bar ${styles.icon}`} />
+            <h1 className={styles.title}>SGF</h1>
+          </div>
         </div>
 
         {error && <div className={styles.error}>{error}</div>}
@@ -58,8 +58,7 @@ export function LoginPage() {
             required
           />
 
-          {/* Antes era <a href="#">; sin destino real, un botón es el
-              elemento correcto en vez de un enlace que no navega a nada */}
+          {/* No navega a nada aún */}
           <button type="button" className={styles.link}>
             ¿Olvidó su contraseña?
           </button>
@@ -67,6 +66,14 @@ export function LoginPage() {
           <button type="submit" className={styles.button}>
             Ingresar
           </button>
+
+          <button
+            type="button"
+            className={styles.buttonSecondary}
+            onClick={() => navigate("/register")}
+          >
+            Registrarse
+        </button>     
         </form>
       </div>
     </div>

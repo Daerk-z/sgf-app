@@ -1,10 +1,8 @@
-// Migrado de legacy/frames/expedicion.html. En el original era un stub
-// sin estilos propios (solo <h1>Expedición</h1>); se mantiene igual de
-// simple, solo con color de texto blanco para que se lea sobre el fondo
-// oscuro del panel.
+import styles from "../css/pages/Dashboard.module.css";
+
 export function ExpedicionPage() {
   return (
-    <div style={{ padding: "18px 22px 22px", color: "#ffffff" }}>
+    <div className={styles.frame} style={{ padding: "18px 22px 22px", color: "#ffffff", background: "transparent", border: "none", boxShadow: "none" }}>
       <h1>Expedición</h1>
     </div>
   );

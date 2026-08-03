@@ -1,8 +1,5 @@
-import styles from "./Configuracion.module.css";
+import styles from "../css/pages/Configuracion.module.css";
 
-// Colores de la paleta tal como estaban por nth-child en el CSS original;
-// el primero es el activo por defecto. Sigue siendo un mock visual, sin
-// selector real todavía (igual que en legacy/frames/configuracion.html).
 const paletteColors = ["#111111", "#444444", "#666666", "#888888", "#d9d9d9"];
 
 export function ConfiguracionPage() {

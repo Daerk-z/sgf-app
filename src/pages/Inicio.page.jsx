@@ -1,11 +1,6 @@
-import styles from "./Inicio.module.css";
+import styles from "../css/pages/Inicio.module.css";
 
-// Contenido de ejemplo/mock igual al del HTML original (todavía no hay
-// datos reales conectados). Se modela como arrays en vez de repetir el
-// mismo bloque JSX a mano, así los 3 pills / 5 alertas / 3 filas por
-// tarjeta salen de un único `.map()` con su `key`.
 const news = ["Noticia de ejemplo", "Noticia de ejemplo", "Noticia de ejemplo"];
-
 const alertasSanitarias = [
   "Texto sobre alerta de algún módulo",
   "Texto sobre alerta de algún módulo",
@@ -13,7 +8,6 @@ const alertasSanitarias = [
   "Texto sobre alerta de algún módulo",
   "Texto sobre alerta de algún módulo",
 ];
-
 const vencimientoInfo = ["Información", "Información", "Información"];
 const stockInfo = ["Información", "Información", "Información"];
 

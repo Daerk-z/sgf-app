@@ -1,7 +1,7 @@
 import { useState } from "react";
-import styles from "./Ventas.module.css";
+import styles from "../css/pages/Ventas.module.css";
 
-// La tabla de ventas era una grilla de celdas vacías escritas a mano
+// La tabla de ventas de una grilla de celdas vacías escritas a mano
 // (7 filas x 8 columnas) en el HTML original; se genera con .map() en
 // vez de repetir el mismo <div class="cell"> 56 veces.
 const ROWS = 7;

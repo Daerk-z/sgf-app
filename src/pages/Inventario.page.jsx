@@ -1,7 +1,7 @@
 import { useState } from "react";
-import styles from "./Inventario.module.css";
+import styles from "../css/pages/Inventario.module.css";
 
-// Grilla de 6 filas x 8 columnas, igual que en el HTML original
+// Grilla de 6 filas x 8 columnas
 const ROWS = 6;
 const COLS = 8;
 

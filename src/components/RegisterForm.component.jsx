@@ -1,20 +1,21 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 
-// Paleta tomada del tema oscuro real de SGF (index.html / inicio-sesion.html)
+// Paleta visual consistente con el resto de la app
 const colors = {
-  bg: "#000000",
-  card: "#282828",
-  input: "#343434",
-  inputFocus: "#3a3a3a",
-  accent: "#4a4a4a",
-  accentHover: "#5a5a5a",
-  title: "#4a4a4a",
-  subtitle: "#999999",
-  label: "#cccccc",
-  placeholder: "#777777",
-  hint: "#7a9e7a",
-  errorBg: "#3a2323",
-  errorText: "#ff8080",
+  bg: "#07111d",
+  card: "#111b2b",
+  input: "rgba(255, 255, 255, 0.04)",
+  inputFocus: "rgba(255, 255, 255, 0.07)",
+  accent: "#5eead4",
+  accentHover: "#86f5e6",
+  title: "#e5eef9",
+  subtitle: "#8da0b8",
+  label: "#cbd5e1",
+  placeholder: "#8da0b8",
+  hint: "#84cc16",
+  errorBg: "rgba(255, 107, 107, 0.12)",
+  errorText: "#ffb4b4",
 };
 
 // Tipos de documento soportados y sus restricciones.
@@ -61,6 +62,7 @@ export function RegisterForm({ action = "registro", onSubmit }) {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState("");
   const [focusField, setFocusField] = useState(null);
+  const navigate = useNavigate();
 
   const currentDocType = docTypes.find((d) => d.value === form.tipoDocumento) || docTypes[0];
 
@@ -109,12 +111,12 @@ export function RegisterForm({ action = "registro", onSubmit }) {
 
   const fieldStyle = (field) => ({
     width: "100%",
-    padding: "14px 18px",
+    padding: "14px 16px",
     background: focusField === field ? colors.inputFocus : colors.input,
-    border: "none",
+    border: "1px solid rgba(148, 163, 184, 0.18)",
     borderRadius: "12px",
-    fontSize: "16px",
-    color: "#ffffff",
+    fontSize: "15px",
+    color: "#e5eef9",
     outline: "none",
     fontFamily: "inherit",
     appearance: "none",
@@ -134,12 +136,12 @@ export function RegisterForm({ action = "registro", onSubmit }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: colors.bg,
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        background: `radial-gradient(circle at top, rgba(94, 234, 212, 0.16), transparent 36%), ${colors.bg}`,
+        fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         padding: "24px",
       }}
     >
-      <div style={{ width: "100%", maxWidth: "420px", background: colors.card, borderRadius: "24px", padding: "48px 40px" }}>
+      <div style={{ width: "100%", maxWidth: "420px", background: colors.card, borderRadius: "24px", padding: "40px 34px", border: "1px solid rgba(148, 163, 184, 0.18)", boxShadow: "0 16px 36px rgba(2, 6, 23, 0.35)" }}>
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <h1 style={{ fontSize: "24px", fontWeight: 700, color: colors.title, letterSpacing: "-0.5px" }}>SGF</h1>
           <p style={{ fontSize: "14px", color: colors.subtitle, marginTop: "6px" }}>Registro de usuarios</p>
@@ -232,9 +234,9 @@ export function RegisterForm({ action = "registro", onSubmit }) {
               padding: "14px 24px",
               marginTop: "8px",
               background: colors.accent,
-              color: "#000000",
-              fontSize: "16px",
-              fontWeight: 600,
+              color: "#07111d",
+              fontSize: "15px",
+              fontWeight: 700,
               textAlign: "center",
               borderRadius: "12px",
               border: "none",
@@ -253,6 +255,25 @@ export function RegisterForm({ action = "registro", onSubmit }) {
         >
           Ver usuarios registrados
         </a>
+
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          style={{
+            width: "100%",
+            padding: "14px 24px",
+            marginTop: "12px",
+            background: "transparent",
+            color: colors.label,
+            fontSize: "15px",
+            fontWeight: 600,
+            border: `1px solid rgba(148, 163, 184, 0.18)`,
+            borderRadius: "12px",
+            cursor: "pointer",
+          }}
+        >
+          ¿Ya tiene una cuenta? Iniciar sesión
+        </button>
       </div>
     </div>
   );
