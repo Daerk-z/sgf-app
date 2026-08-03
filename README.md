@@ -13,8 +13,13 @@ empaquetado de escritorio sin volver a mover nada de sitio.
 │   └── web-legacy/       Sitio estático original, previo a React. Referencia
 │                         histórica: no se compila ni se despliega.
 ├── packages/             Código compartido entre apps (todavía vacío)
+├── docs/                 Arquitectura y decisiones registradas
 └── compose.dev.yaml      Levanta el conjunto en desarrollo
 ```
+
+Cómo está montado todo esto y por qué: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Lo que se consideró y se descartó por el camino:
+[`docs/decisions/`](docs/decisions/).
 
 ## Cómo funciona: cada app es autónoma
 
