@@ -47,11 +47,19 @@ body {
   min-height: 100vh;
 }
 
+/* Efectos visuales ligeros y transición de interacción de botones y
+   formularios (venían de App.css, que solo existía para el componente
+   App de la plantilla de Vite). */
 button,
 input,
 select,
 textarea {
   font: inherit;
+  transition: all 180ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
 }
 
 a {
